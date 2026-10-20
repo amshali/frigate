@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Frigate</string>
+    <string name="connect_title">Connect to Frigate</string>
+    <string name="server_url">Server URL</string>
+    <string name="server_url_placeholder">https://frigate.example</string>
+    <string name="refresh">Refresh</string>
+    <string name="change_server">Change</string>
+    <string name="open_frigate">Open Frigate</string>
+    <string name="invalid_server_url">Enter a valid server URL.</string>
+    <string name="page_load_failed_title">Frigate did not load</string>
+    <string name="page_load_failed">Could not load the page: %1$s\n%2$s</string>
+    <string name="server_http_error">Server returned HTTP %1$d\n%2$s</string>
+    <string name="ssl_error">Secure connection failed (SSL error %1$d). Check the server certificate or use a trusted HTTPS certificate.</string>
+    <string name="web_page_error">The page reported a JavaScript error: %1$s</string>
+    <string name="retry">Retry</string>
+</resources>
