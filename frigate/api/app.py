@@ -178,7 +178,9 @@ def metrics(request: Request):
     # Retrieve the latest statistics and update the Prometheus metrics
     stats = request.app.stats_emitter.get_latest_stats()
     # query DB for count of events by camera, label
-    event_counts: list[dict[str, Any]] = (
+    # Materialize the rows; the collector is shared across request threads and a
+    # lazy query would step one sqlite cursor from two threads.
+    event_counts: list[dict[str, Any]] = list(
         Event.select(Event.camera, Event.label, fn.Count())
         .group_by(Event.camera, Event.label)
         .dicts()
@@ -1317,7 +1319,7 @@ def nvinfo():
     dependencies=[Depends(require_role(["admin"]))],
 )
 async def logs(
-    service: str = Path(enum=["frigate", "nginx", "go2rtc"]),
+    service: str = Path(json_schema_extra={"enum": ["frigate", "nginx", "go2rtc"]}),
     download: str | None = None,
     stream: bool | None = False,
     start: int | None = 0,

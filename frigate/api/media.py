@@ -64,6 +64,7 @@ from frigate.util.recording_coverage import (
     plan_clip,
     recording_overlap,
     resolve_coverage,
+    sequence_needs_audio,
 )
 from frigate.util.time import get_normalized_tz_name
 
@@ -337,7 +338,7 @@ async def get_snapshot_from_recording(
     request: Request,
     camera_name: str,
     frame_time: float,
-    format: str = Path(enum=["png", "jpg"]),
+    format: str = Path(json_schema_extra={"enum": ["png", "jpg"]}),
     height: int = None,
 ):
     if camera_name not in request.app.frigate_config.cameras:
@@ -624,14 +625,14 @@ async def recording_clip(
 
 
 def _build_vod_clip(
-    row: Any, start: float, end: float
+    row: Any, start: float, end: float, needs_audio: bool
 ) -> tuple[dict[str, Any], int] | None:
     """Build one nginx-vod clip dict + duration (ms) for a recording row trimmed to [start, end).
 
     Realization comes entirely from the shared plan_clip, so the coverage
     endpoint's realized timelines match this manifest by construction.
     """
-    plan = plan_clip(row, start, end)
+    plan = plan_clip(row, start, end, needs_audio)
 
     if plan.skipped:
         return None
@@ -690,6 +691,7 @@ async def _vod_response(
         null_audio_glitches(resolve_coverage(camera_name, start_ts, end_ts)),
         stream_preference,
     )
+    needs_audio = sequence_needs_audio(spans)
 
     durations: list[int] = []
     clips: list[dict[str, Any]] = []
@@ -707,7 +709,7 @@ async def _vod_response(
             row.end_time,
             row.duration,
         )
-        built = _build_vod_clip(row, span_start, span_end)
+        built = _build_vod_clip(row, span_start, span_end, needs_audio)
 
         if built is None:
             continue
@@ -1061,7 +1063,7 @@ async def event_thumbnail(
     max_cache_age: int = Query(
         2592000, description="Max cache age in seconds. Default 30 days in seconds."
     ),
-    format: str = Query(default="ios", enum=["ios", "android"]),
+    format: str = Query(default="ios", json_schema_extra={"enum": ["ios", "android"]}),
 ):
     thumbnail_bytes = None
     event_complete = False
@@ -1858,7 +1860,7 @@ async def preview_mp4(
 async def review_preview(
     request: Request,
     event_id: str,
-    format: str = Query(default="gif", enum=["gif", "mp4"]),
+    format: str = Query(default="gif", json_schema_extra={"enum": ["gif", "mp4"]}),
 ):
     try:
         review: ReviewSegment = ReviewSegment.get(ReviewSegment.id == event_id)
