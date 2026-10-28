@@ -77,6 +77,7 @@ private class PullToRefreshWebView(
     private var pullDistance = 0f
     private var pullGestureEligible = false
     private var pointerDown = false
+    private var multiTouchSeen = false
     private var gestureId = 0
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -87,6 +88,7 @@ private class PullToRefreshWebView(
             touchStartY = event.y
             pullDistance = 0f
             pointerDown = true
+            multiTouchSeen = false
             pullGestureEligible = false
             val currentGestureId = ++gestureId
             if (canRefresh()) {
@@ -110,7 +112,12 @@ private class PullToRefreshWebView(
                     })($cssX, $cssY);
                     """.trimIndent(),
                 ) { result ->
-                    if (currentGestureId == gestureId && pointerDown && canRefresh()) {
+                    if (
+                        currentGestureId == gestureId &&
+                        pointerDown &&
+                        !multiTouchSeen &&
+                        canRefresh()
+                    ) {
                         pullGestureEligible = result == "true"
                         lastTouchY = lastObservedTouchY
                     }
@@ -118,7 +125,23 @@ private class PullToRefreshWebView(
             }
         }
 
+        if (event.pointerCount > 1 || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+            // Pinch zoom and other multi-finger gestures must never refresh
+            multiTouchSeen = true
+            finishPullToRefresh()
+        }
+
         val handled = super.onTouchEvent(event)
+
+        if (multiTouchSeen) {
+            if (
+                event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+            ) {
+                pointerDown = false
+            }
+            return handled
+        }
 
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
