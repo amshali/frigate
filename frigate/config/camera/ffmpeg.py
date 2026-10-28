@@ -2,8 +2,12 @@ from enum import Enum
 
 from pydantic import Field, field_validator
 
+<<<<<<< HEAD
 from frigate.util.config import resolve_ffmpeg_path
 from frigate.util.env import EnvString
+=======
+from frigate.util.config import is_valid_ffmpeg_path, resolve_ffmpeg_path
+>>>>>>> master
 
 from ..base import FrigateBaseModel
 
@@ -100,6 +104,16 @@ class FfmpegConfig(FrigateBaseModel):
         title="GPU index",
         description="Default GPU index used for hardware acceleration if available.",
     )
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, v: str) -> str:
+        if not is_valid_ffmpeg_path(v):
+            raise ValueError(
+                "FFmpeg path must be a version alias or an absolute path without "
+                "spaces, quotes or shell characters"
+            )
+        return v
 
     @property
     def ffmpeg_path(self) -> str:

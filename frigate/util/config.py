@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 CURRENT_CONFIG_VERSION = "0.19-0"
 DEFAULT_CONFIG_FILE = os.path.join(CONFIG_DIR, "config.yml")
 
+<<<<<<< HEAD
 # the detector field that used to hold the device, for detectors that named it
 # something other than "device"
 DETECTOR_DEVICE_FIELDS = {
@@ -85,6 +86,16 @@ def _warn_ignored_ffmpeg_path(path: str) -> None:
         "Ignoring ffmpeg.path %s because FRIGATE_ROOT_SERVICES runs frigate as root and that location is writable by the unprivileged user; using the bundled build",
         path,
     )
+=======
+# ffmpeg commands are built as strings and split on whitespace, so a custom path
+# must stay a single plain token
+_CUSTOM_FFMPEG_PATH = re.compile(r"/[\w.+@/-]+")
+
+
+def is_valid_ffmpeg_path(path: str) -> bool:
+    """Check that a custom ffmpeg path has no whitespace, quotes or shell syntax."""
+    return not path.startswith("/") or _CUSTOM_FFMPEG_PATH.fullmatch(path) is not None
+>>>>>>> master
 
 
 def resolve_ffmpeg_path(path: str, binary: str = "ffmpeg") -> str:
@@ -93,12 +104,19 @@ def resolve_ffmpeg_path(path: str, binary: str = "ffmpeg") -> str:
     A bare version alias that is no longer bundled (for example one that was
     dropped when the default version changed) falls back to the default
     bundled version so existing configs keep working across an upgrade or a
+<<<<<<< HEAD
     revert. Custom install paths (anything absolute) are used as-is, except
     one in a runtime-user-writable tree while FRIGATE_ROOT_SERVICES makes
     frigate root; see RUNTIME_USER_WRITABLE_DIRS.
+=======
+    revert. Custom install paths (anything absolute) are used as-is, unless
+    they fail `is_valid_ffmpeg_path`, which also falls back to the default.
+>>>>>>> master
     """
-    if path == "default" or (
-        not path.startswith("/") and path not in INCLUDED_FFMPEG_VERSIONS
+    if (
+        path == "default"
+        or not is_valid_ffmpeg_path(path)
+        or (not path.startswith("/") and path not in INCLUDED_FFMPEG_VERSIONS)
     ):
         version = DEFAULT_FFMPEG_VERSION
     elif path in INCLUDED_FFMPEG_VERSIONS:
