@@ -18,8 +18,8 @@ android {
     defaultConfig {
         applicationId = "org.frigate.mobile"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
+        targetSdk = 36
+        versionCode = 3
         versionName = "0.1.0"
     }
 
@@ -40,6 +40,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfigs.findByName("release")?.let { signingConfig = it }
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
 
