@@ -91,7 +91,8 @@ private class PullToRefreshWebView(
             multiTouchSeen = false
             pullGestureEligible = false
             val currentGestureId = ++gestureId
-            if (canRefresh()) {
+            // Pulls must start in the top quarter of the view
+            if (canRefresh() && event.y <= height * 0.15f) {
                 val cssScale = resources.displayMetrics.density
                 val cssX = event.x / cssScale
                 val cssY = event.y / cssScale
