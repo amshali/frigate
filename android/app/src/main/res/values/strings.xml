@@ -14,5 +14,6 @@
     <string name="web_page_error">The page reported a JavaScript error: %1$s</string>
     <string name="connection_failed">Can\'t reach the server. Check the address and your connection.</string>
     <string name="retrying">Connecting… retry %1$d of %2$d</string>
+    <string name="server_unreachable">Connection to the server lost. Reconnecting…</string>
     <string name="retry">Retry</string>
 </resources>

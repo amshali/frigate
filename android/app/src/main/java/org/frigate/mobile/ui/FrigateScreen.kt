@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,7 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.frigate.mobile.R
 import org.frigate.mobile.data.normalizeServerUrl
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
+private const val HEALTH_CHECK_INTERVAL_MS = 5000L
+private const val HEALTH_CHECK_TIMEOUT_MS = 4000
 private const val MAX_LOAD_RETRIES = 3
 private const val RETRY_DELAY_MS = 4000L
 private const val PULL_TO_REFRESH_THRESHOLD_DP = 160f
@@ -212,6 +220,24 @@ private class PullToRefreshWebView(
     }
 }
 
+private suspend fun isServerHealthy(baseUrl: String): Boolean =
+    withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            connection = (URL("${baseUrl.trimEnd('/')}/api/").openConnection() as HttpURLConnection)
+                .apply {
+                    connectTimeout = HEALTH_CHECK_TIMEOUT_MS
+                    readTimeout = HEALTH_CHECK_TIMEOUT_MS
+                    requestMethod = "GET"
+                }
+            connection.responseCode in 200..299
+        } catch (_: java.io.IOException) {
+            false
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
 @Composable
 fun FrigateScreen() {
     val context = LocalContext.current
@@ -232,8 +258,21 @@ fun FrigateScreen() {
     var retryAttempts by remember { mutableIntStateOf(0) }
     var loadFailed by remember { mutableStateOf(false) }
 
+    var serverReachable by remember { mutableStateOf(true) }
+
     BackHandler(enabled = canGoBack) {
         webView?.goBack()
+    }
+
+    LaunchedEffect(activeUrl) {
+        val url = activeUrl ?: return@LaunchedEffect
+        serverReachable = true
+        while (true) {
+            delay(HEALTH_CHECK_INTERVAL_MS)
+            val healthy = isServerHealthy(url)
+            if (healthy && !serverReachable) webView?.reload()
+            serverReachable = healthy
+        }
     }
 
     if (activeUrl == null) {
@@ -423,6 +462,17 @@ fun FrigateScreen() {
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = 12.dp),
+                    )
+                }
+                if (!serverReachable) {
+                    Text(
+                        stringResource(R.string.server_unreachable),
+                        color = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.error)
+                            .padding(12.dp),
                     )
                 }
                 if (isPullToRefreshing) {
