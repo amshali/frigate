@@ -12,6 +12,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,6 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.frigate.mobile.R
 import org.frigate.mobile.data.normalizeServerUrl
+
+private const val MAX_LOAD_RETRIES = 3
+private const val RETRY_DELAY_MS = 4000L
 
 @Composable
 fun FrigateScreen() {
@@ -61,6 +66,8 @@ fun FrigateScreen() {
     var canGoBack by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var pageError by remember { mutableStateOf<String?>(null) }
+    var retryAttempts by remember { mutableIntStateOf(0) }
+    var loadFailed by remember { mutableStateOf(false) }
 
     BackHandler(enabled = canGoBack) {
         webView?.goBack()
@@ -116,25 +123,34 @@ fun FrigateScreen() {
                                     favicon: Bitmap?,
                                 ) {
                                     isLoading = true
+                                    loadFailed = false
                                 }
 
                                 override fun onPageFinished(view: WebView, url: String?) {
                                     isLoading = false
+                                    if (!loadFailed) retryAttempts = 0
                                     canGoBack = view.canGoBack()
                                 }
 
                                 override fun onReceivedError(
                                     view: WebView,
                                     request: WebResourceRequest,
-                                    error: WebResourceError,
+                                    loadError: WebResourceError,
                                 ) {
-                                    if (request.isForMainFrame) {
+                                    if (!request.isForMainFrame) return
+                                    loadFailed = true
+                                    if (retryAttempts < MAX_LOAD_RETRIES) {
+                                        retryAttempts++
+                                        isLoading = true
+                                        val failedUrl = request.url.toString()
+                                        view.postDelayed({
+                                            if (view.isAttachedToWindow) view.loadUrl(failedUrl)
+                                        }, RETRY_DELAY_MS)
+                                    } else {
+                                        retryAttempts = 0
                                         isLoading = false
-                                        pageError = context.getString(
-                                            R.string.page_load_failed,
-                                            error.description,
-                                            request.url,
-                                        )
+                                        error = context.getString(R.string.connection_failed)
+                                        activeUrl = null
                                     }
                                 }
 
@@ -206,7 +222,26 @@ fun FrigateScreen() {
                         }
                     },
                 )
-                if (isLoading) {
+                if (retryAttempts > 0) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            stringResource(
+                                R.string.retrying,
+                                retryAttempts,
+                                MAX_LOAD_RETRIES,
+                            ),
+                        )
+                    }
+                } else if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
@@ -283,7 +318,7 @@ private fun ConnectScreen(
                 imeAction = ImeAction.Go,
             ),
             keyboardActions = KeyboardActions(onGo = { onConnect() }),
-            singleLine = true,
+            maxLines = 4,
             modifier = Modifier.fillMaxWidth(),
         )
         if (error != null) {

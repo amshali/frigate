@@ -12,5 +12,7 @@
     <string name="server_http_error">Server returned HTTP %1$d\n%2$s</string>
     <string name="ssl_error">Secure connection failed (SSL error %1$d). Check the server certificate or use a trusted HTTPS certificate.</string>
     <string name="web_page_error">The page reported a JavaScript error: %1$s</string>
+    <string name="connection_failed">Can\'t reach the server. Check the address and your connection.</string>
+    <string name="retrying">Connecting… retry %1$d of %2$d</string>
     <string name="retry">Retry</string>
 </resources>
