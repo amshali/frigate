@@ -61,8 +61,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private const val HEALTH_CHECK_INTERVAL_MS = 5000L
-private const val HEALTH_CHECK_TIMEOUT_MS = 4000
+private const val HEALTH_CHECK_INTERVAL_MS = 10000L
+private const val HEALTH_CHECK_TIMEOUT_MS = 8000
 private const val MAX_LOAD_RETRIES = 3
 private const val RETRY_DELAY_MS = 4000L
 private const val PULL_TO_REFRESH_THRESHOLD_DP = 160f
