@@ -63,6 +63,8 @@ import kotlinx.coroutines.withContext
 
 private const val HEALTH_CHECK_INTERVAL_MS = 10000L
 private const val HEALTH_CHECK_TIMEOUT_MS = 8000
+private const val HEALTH_CHECK_RETRY_DELAY_MS = 2000L
+private const val HEALTH_CHECK_FAILURE_RETRIES = 2
 private const val MAX_LOAD_RETRIES = 3
 private const val RETRY_DELAY_MS = 4000L
 private const val PULL_TO_REFRESH_THRESHOLD_DP = 160f
@@ -269,7 +271,15 @@ fun FrigateScreen() {
         serverReachable = true
         while (true) {
             delay(HEALTH_CHECK_INTERVAL_MS)
-            val healthy = isServerHealthy(url)
+            // Transient failures are common right after the app is resumed from the
+            // launcher (network/VPN not ready yet), so confirm before showing the banner
+            var healthy = isServerHealthy(url)
+            var retries = 0
+            while (!healthy && retries < HEALTH_CHECK_FAILURE_RETRIES) {
+                delay(HEALTH_CHECK_RETRY_DELAY_MS)
+                healthy = isServerHealthy(url)
+                retries++
+            }
             if (healthy && !serverReachable) webView?.reload()
             serverReachable = healthy
         }

@@ -11,16 +11,27 @@ val keystoreProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 
+base {
+    archivesName.set("frigate-mobile")
+}
+
 android {
     namespace = "org.frigate.mobile"
     compileSdk = 36
+
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "frigate-mobile-${buildType.name}.apk"
+        }
+    }
 
     defaultConfig {
         applicationId = "org.frigate.mobile"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.0"
+        versionCode = 4
+        versionName = "0.2.0"
     }
 
     signingConfigs {
